@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: recipe-finder-db
+    environment:
+      POSTGRES_DB: recipefinder
+      POSTGRES_USER: ${DB_USERNAME:-NoutSpace}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-123456}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-NoutSpace} -d recipefinder"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./recipe-finder-api
+      dockerfile: Dockerfile
+    container_name: recipe-finder-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/recipefinder
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-NoutSpace}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-123456}
+      - FLYWAY_USER=${DB_USERNAME:-NoutSpace}
+      - FLYWAY_PASSWORD=${DB_PASSWORD:-123456}
+      - JWT_SECRET=${JWT_SECRET:-change-me-to-a-256-bit-secret-key-in-production-env}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
